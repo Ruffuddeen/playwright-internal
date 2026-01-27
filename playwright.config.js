@@ -1,5 +1,7 @@
 // playwright.config.js
+require('dotenv').config();
 const { defineConfig } = require('@playwright/test');
+const path = require('path');
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -13,7 +15,7 @@ module.exports = defineConfig({
     headless: false,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    baseURL: 'https://eximauto.pandostaging.in',
+    baseURL: process.env.EXIM_BASE_URL || 'https://eximauto.pandostaging.in',
     trace: 'on-first-retry',
   },
 
