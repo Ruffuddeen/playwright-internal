@@ -7,6 +7,14 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
+    parameters {
+        choice(
+            name: 'BROWSER',
+            choices: ['chromium', 'firefox', 'webkit', 'all'],
+            description: 'Select browser to run tests'
+        )
+    }
+
     environment {
         NODE_ENV = 'test'
         EXIM_BASE_URL = 'https://eximauto.pandostaging.in'
@@ -34,10 +42,22 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo "Running Playwright tests..."
-                sh '''
-                    npm run test || true
-                '''
+                echo "Running Playwright tests on ${BROWSER} browser..."
+                script {
+                    def testCommand = 'npm run test'
+                    
+                    if (params.BROWSER == 'chromium') {
+                        testCommand = 'npx playwright test --project=Chromium'
+                    } else if (params.BROWSER == 'firefox') {
+                        testCommand = 'npx playwright test --project=Firefox'
+                    } else if (params.BROWSER == 'webkit') {
+                        testCommand = 'npx playwright test --project=WebKit'
+                    }
+                    
+                    sh '''
+                        ''' + testCommand + ''' || true
+                    '''
+                }
             }
         }
 
