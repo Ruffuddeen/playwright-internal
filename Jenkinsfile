@@ -36,6 +36,7 @@ pipeline {
                     npm --version
                     npm install
                     npx playwright install
+                    npx playwright install-deps
                 '''
             }
         }
