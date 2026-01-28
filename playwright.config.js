@@ -12,7 +12,7 @@ module.exports = defineConfig({
   ],
 
   use: {
-    headless: false,
+    headless: true,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     baseURL: process.env.EXIM_BASE_URL || 'https://eximauto.pandostaging.in',
