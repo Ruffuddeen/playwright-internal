@@ -76,11 +76,6 @@ pipeline {
         always {
             echo "Test execution completed"
             
-            // Publish Allure report
-            allure includeProperties: false,
-                    jdk: '',
-                    results: [[path: 'allure-results']]
-
             // Archive test results and reports
             archiveArtifacts artifacts: '**/test-results/**,**/allure-report/**,**/allure-results/**',
                                 allowEmptyArchive: true
