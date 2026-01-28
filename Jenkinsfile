@@ -76,6 +76,9 @@ pipeline {
         always {
             echo "Test execution completed"
             
+            // Publish Allure report (adds "Allure Report" link on build page for sharing)
+            allure(results: [[path: 'allure-results']])
+            
             // Archive test results and reports
             archiveArtifacts artifacts: '**/test-results/**,**/allure-report/**,**/allure-results/**',
                                 allowEmptyArchive: true
