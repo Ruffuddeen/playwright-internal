@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Run History – Playwright</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    :root {
+      --bg: #1a1d21;
+      --surface: #25282c;
+      --border: #3d4148;
+      --text: #e4e6eb;
+      --text-muted: #8a8d91;
+      --passed: #31a24c;
+      --failed: #e74c3c;
+      --other: #6c757d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1rem 0;
+    }
+    .sidebar .brand { padding: 0 1rem 1rem; font-weight: 600; font-size: 1rem; }
+    .sidebar nav a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .sidebar nav a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .sidebar nav a.active { color: var(--text); background: rgba(255,255,255,0.08); }
+    main {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      overflow: auto;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.5rem; font-weight: 600; }
+    .summary {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .summary span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .summary .runs { color: var(--text); }
+    .summary .passed { color: var(--passed); }
+    .summary .failed { color: var(--failed); }
+    .summary .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .summary .dot.passed { background: var(--passed); }
+    .summary .dot.failed { background: var(--failed); }
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      max-width: 900px;
+    }
+    .chart-wrap h2 {
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .env-bar { margin-bottom: 1rem; }
+    .env-bar select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .empty { color: var(--text-muted); font-size: 0.95rem; }
+    .current-run {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      max-width: 900px;
+      margin-bottom: 1.5rem;
+    }
+    .current-run h2 {
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .current-run ul { list-style: none; margin: 0; padding: 0; }
+    .current-run li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .current-run li:last-child { border-bottom: none; }
+    .current-run .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .current-run .status-dot.passed { background: var(--passed); }
+    .current-run .status-dot.failed { background: var(--failed); }
+    .current-run .status-dot.other { background: var(--other); }
+    .current-run .case-title { flex: 1; color: var(--text); }
+    .current-run .case-project { color: var(--text-muted); font-size: 0.85rem; }
+    .current-run .case-duration { color: var(--text-muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">Playwright</div>
+    <nav>
+      <a href="#" class="active">Home</a>
+      <a href="#">Test Cases</a>
+      <a href="#">Test Runs</a>
+      <a href="#">Settings</a>
+    </nav>
+  </aside>
+  <main>
+    <h1>Home</h1>
+    <div class="env-bar">
+      <select id="env" aria-label="Environment">
+        <option>All environments</option>
+      </select>
+    </div>
+    <div class="summary" id="summary">
+      <span class="runs"><strong id="totalRuns">0</strong> runs</span>
+      <span class="passed"><span class="dot passed"></span> <strong id="totalPassed">0</strong> passed</span>
+      <span class="failed"><span class="dot failed"></span> <strong id="totalFailed">0</strong> failed</span>
+    </div>
+    <div class="current-run" id="currentRunSection">
+      <h2>Current run</h2>
+      <ul id="currentRunList"></ul>
+      <p id="currentRunEmpty" class="empty" style="display:none;">No current run. Run tests then <code>npm run dashboard:update</code>.</p>
+    </div>
+    <div class="chart-wrap">
+      <h2>Test Run History (Last 30 Days)</h2>
+      <canvas id="chart" height="120"></canvas>
+      <p id="empty" class="empty" style="display:none;">No run history yet. Run tests and then: <code>npm run dashboard:update</code></p>
+    </div>
+  </main>
+  <script>
+    (function () {
+      const base = window.location.pathname.replace(/\/dashboard\/?.*$/, '') || '/';
+      const basePath = base + (base.endsWith('/') ? '' : '/');
+      const historyUrl = window.location.origin + basePath + 'dashboard-data/history.json';
+      const latestRunUrl = window.location.origin + basePath + 'dashboard-data/latest-run.json';
+      let chart = null;
+
+      function renderCurrentRun(latest) {
+        const listEl = document.getElementById('currentRunList');
+        const emptyEl = document.getElementById('currentRunEmpty');
+        if (!latest || !Array.isArray(latest.testCases) || latest.testCases.length === 0) {
+          listEl.innerHTML = '';
+          emptyEl.style.display = 'block';
+          return;
+        }
+        emptyEl.style.display = 'none';
+        listEl.innerHTML = latest.testCases.map(function (tc) {
+          const statusClass = tc.status === 'passed' ? 'passed' : (tc.status === 'failed' || tc.status === 'timedOut') ? 'failed' : 'other';
+          const durationStr = tc.duration != null ? tc.duration + 's' : '';
+          return '<li><span class="status-dot ' + statusClass + '" title="' + tc.status + '"></span><span class="case-title">' + escapeHtml(tc.title) + '</span><span class="case-project">' + escapeHtml(tc.project) + '</span><span class="case-duration">' + durationStr + '</span></li>';
+        }).join('');
+      }
+      function escapeHtml(s) {
+        if (s == null) return '';
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function render(history) {
+        const last30 = (history || []).slice(-30);
+        const totalRuns = last30.reduce((s, d) => s + d.total, 0);
+        const totalPassed = last30.reduce((s, d) => s + d.passed, 0);
+        const totalFailed = last30.reduce((s, d) => s + d.failed, 0);
+
+        document.getElementById('totalRuns').textContent = totalRuns;
+        document.getElementById('totalPassed').textContent = totalPassed;
+        document.getElementById('totalFailed').textContent = totalFailed;
+
+        if (last30.length === 0) {
+          document.getElementById('empty').style.display = 'block';
+          document.getElementById('chart').style.display = 'none';
+          return;
+        }
+        document.getElementById('empty').style.display = 'none';
+        document.getElementById('chart').style.display = 'block';
+
+        const labels = last30.map(d => {
+          const [y, m, day] = d.date.split('-');
+          const dt = new Date(y, m - 1, day);
+          const today = new Date();
+          return (dt.toDateString() === today.toDateString()) ? 'Today' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+
+        const passedData = last30.map(d => d.passed);
+        const failedData = last30.map(d => d.failed);
+        const otherData = last30.map(d => Math.max(0, (d.total || 0) - d.passed - d.failed));
+
+        if (chart) chart.destroy();
+        const ctx = document.getElementById('chart').getContext('2d');
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Passed', data: passedData, backgroundColor: '#31a24c', stack: 'stack' },
+              { label: 'Failed', data: failedData, backgroundColor: '#e74c3c', stack: 'stack' },
+              { label: 'Other', data: otherData, backgroundColor: '#6c757d', stack: 'stack' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: true, position: 'top', labels: { color: '#8a8d91' } } },
+            scales: {
+              x: { stacked: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#8a8d91', maxRotation: 45 } },
+              y: { stacked: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#8a8d91' } }
+            }
+          }
+        });
+      }
+
+      fetch(latestRunUrl)
+        .then(r => r.ok ? r.json() : null)
+        .then(renderCurrentRun)
+        .catch(function () { renderCurrentRun(null); });
+
+      fetch(historyUrl)
+        .then(r => r.ok ? r.json() : [])
+        .then(render)
+        .catch(function () { render([]); });
+    })();
+  </script>
+</body>
+</html>
